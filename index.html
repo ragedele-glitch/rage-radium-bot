@@ -33,7 +33,7 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:4px 12px 24px}
 <body>
 <header><div class="top"><div><span class="title">Rage Radium Bot</span> <span id="badge"></span></div><span class="pill" id="pill"><span class="dot mid"></span>Loading</span></div></header>
 <main id="app"><div class="empty">Loading…</div></main>
-<footer id="foot">Updates by itself every 30 seconds. Your wallet address is never shown on this page.</footer>
+<footer id="foot">Updates by itself every minute. Your wallet address is never shown on this page.</footer>
 <script>
 // Rage Radium Bot's own page. It reads radium.enc (sealed with the key after the # in this link; the key never
 // leaves your phone) from the radium-data branch, which the bot updates about once a minute.
@@ -93,8 +93,8 @@ function render(){
  <div class="rd" style="margin-top:8px">Rules: same wallets and filters as the paper main account ($25k pool minimum, 32.5% top-10 holder block and the safety checks). Exits: −25% stop, +15% breakeven, +$5 floor, trail from +40%, half at 2x, breakeven floor from +50%, sell when the copied wallet sells. Prices checked every ~4 seconds.</div></div>`;
  h+=`<div class="card"><h3>Activity</h3>${(R.events||[]).map(e=>`<div class="row"><div class="rd">${T(e.ts)} · <span class="${e.kind=="bad"?"r":e.kind=="buy"||e.kind=="sell"?"":"m"}">${esc(e.msg)}</span></div></div>`).join("")||'<div class="empty">Nothing yet</div>'}</div>`;
  app.innerHTML=h;
- document.getElementById("foot").textContent=`Report from ${T(R.ts)}. Updates by itself every 30 seconds. Your wallet address is never shown on this page.`}
-load();setInterval(load,30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
+ document.getElementById("foot").textContent=`Report from ${T(R.ts)}. Updates by itself every minute. Your wallet address is never shown on this page.`}
+load();setInterval(load,60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
 </script>
 </body>
 </html>
