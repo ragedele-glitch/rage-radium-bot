@@ -77,7 +77,7 @@ function state(){const now=Date.now()/1000,age=now-R.ts,E=R.engine||{};const ok=
 function lpx(t){const q=LQ[t.mint];return q&&Date.now()/1000-q.t<45?q.p:null}
 function tval(t){const P=lpx(t);if(P&&t.qty!=null)return t.qty*P;return t.value||0}
 function tpnl(t){return tval(t)+(t.half_usd||0)-(t.stake||0)}
-const funded=()=>R&&R.balance_sol!=null&&R.balance_sol>0.0005;
+const funded=()=>R&&R.balance_sol!=null&&R.balance_sol>=0.01;   // a few cents of leftover dust is not a deposit
 function money(){const x=R.stats||{},o=R.open||[];const ov=o.reduce((s,t)=>s+tval(t),0),opnl=o.reduce((s,t)=>s+tpnl(t),0);
  const w=funded()?R.balance_usd:null;return{w,ov,eq:w==null?null:w+(live()?ov:0),real:x.pnl||0,opnl,tot:(x.pnl||0)+opnl}}
 function curve(pts,base){if(pts.length<2)return'<div class="empty">The chart appears after the first closed trade.</div>';
