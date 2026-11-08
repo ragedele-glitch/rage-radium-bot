@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Rage Radium Bot</title>
+<style>
+:root{--bg:#0b0f14;--card:#151a21;--line:#252b35;--tx:#e6e9ef;--mut:#8a93a3;--g:#22c55e;--r:#ef4444;--y:#eab308;--b:#a855f7}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 12px;border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.title{font-weight:800;font-size:17px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--card);border:1px solid var(--line)}
+.dot{width:9px;height:9px;border-radius:50%}.on{background:var(--g);box-shadow:0 0 8px var(--g)}.off{background:var(--r)}.mid{background:var(--y)}
+main{padding:12px;max-width:760px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:13px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.big{font-size:30px;font-weight:800}.g{color:var(--g)}.r{color:var(--r)}.y{color:var(--y)}.m{color:var(--mut)}.s{font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.kv{background:#10141a;border-radius:8px;padding:8px}.kv b{display:block;font-size:17px}.kv span{font-size:12px;color:var(--mut)}
+.row{border-top:1px solid var(--line);padding:10px 0}.row:first-child{border-top:0;padding-top:0}
+.rh{display:flex;justify-content:space-between;gap:8px;font-weight:600}.rd{font-size:13px;color:var(--mut);margin-top:3px}
+.warn{background:#3a1d0d;border:1px solid #7c2d12;color:#fed7aa;border-radius:10px;padding:10px;margin-bottom:12px;font-size:14px}
+.empty{color:var(--mut);text-align:center;padding:18px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}td{padding:6px 4px;text-align:right;border-top:1px solid var(--line)}td:first-child{text-align:left}
+footer{color:var(--mut);font-size:12px;text-align:center;padding:4px 12px 24px}
+.rbadge{display:inline-block;font-size:12px;font-weight:800;padding:3px 9px;border-radius:6px;letter-spacing:.05em}.rb-dry{background:#13284a;color:#93c5fd}.rb-live{background:#7f1d1d;color:#fff}.rb-off{background:#262b33;color:#aab2bf}
+.rbig{display:block;text-align:center;font-weight:800;font-size:17px;padding:14px;border-radius:12px;margin-top:10px;text-decoration:none}.rb-stop{background:#b91c1c;color:#fff}.rb-pause{background:#a16207;color:#fff}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:4px}.t-pass{background:#123d24;color:#4ade80}.t-kill{background:#3d1414;color:#f87171}.t-other{background:#262b33;color:#aab2bf}
+</style>
+</head>
+<body>
+<header><div class="top"><div><span class="title">Rage Radium Bot</span> <span id="badge"></span></div><span class="pill" id="pill"><span class="dot mid"></span>Loading</span></div></header>
+<main id="app"><div class="empty">Loading…</div></main>
+<footer id="foot">Updates by itself every 30 seconds. Your wallet address is never shown on this page.</footer>
+<script>
+// Rage Radium Bot's own page. It reads radium.enc (sealed with the key after the # in this link; the key never
+// leaves your phone) from the radium-data branch, which the bot updates about once a minute.
+const OWNER="ragedele-glitch",REPO="paper-scanner";
+const CTL=`https://github.com/${OWNER}/${REPO}/actions/workflows/radium-control.yml`;
+let K=location.hash.slice(1);if(K)try{localStorage.setItem("rk",K)}catch(e){}else try{K=localStorage.getItem("rk")||""}catch(e){}
+let R=null,err="",lastOk=0;
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const usd=(v,d=2)=>v==null?"–":(v<0?"-$":"$")+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const sgn=(v,d=2)=>v==null?"–":(v>=0?"+":"-")+"$"+Math.abs(v).toFixed(d);
+const cls=v=>v==null?"m":v>0?"g":v<0?"r":"m";
+const T=ts=>ts?new Date(ts*1000).toLocaleString("en-GB",{timeZone:"Africa/Lagos",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:true}):"–";
+function ago(s){s=Math.max(0,s);if(s<60)return Math.round(s)+" s ago";if(s<3600)return Math.round(s/60)+" min ago";if(s<86400)return(s/3600).toFixed(1)+" h ago";return(s/86400).toFixed(1)+" days ago"}
+function b64(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
+async function fetchBlob(){
+ try{const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/radium.enc?ref=radium-data&t=${Date.now()}`,{cache:"no-store",headers:{Accept:"application/vnd.github.raw"}});if(r.ok)return(await r.text()).trim()}catch(e){}
+ const r=await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/radium-data/radium.enc?t=${Date.now()}`,{cache:"no-store"});if(!r.ok)throw new Error("fetch "+r.status);return(await r.text()).trim()}
+async function load(){
+ if(!K){err="This link is missing its key. Open the full link you were sent.";render();return}
+ try{const raw=b64(await fetchBlob());const key=await crypto.subtle.importKey("raw",b64(K),"AES-GCM",false,["decrypt"]);
+  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:raw.slice(0,12)},key,raw.slice(12));
+  const txt=await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  R=JSON.parse(txt);lastOk=Date.now()/1000;err=""}
+ catch(e){if(!R)err=String(e.message).includes("404")?"No data yet. The bot's first report arrives a minute or two after its first run starts.":e.name=="OperationError"?"The key in this link doesn't match. Open the full link you were sent.":"Couldn't load the bot's data yet. It will retry by itself."}
+ render()}
+function badge(m){m=m||"off";return `<span class="rbadge ${m=="live"?"rb-live":m=="dry-run"?"rb-dry":"rb-off"}">${m=="live"?"LIVE · REAL MONEY":m=="dry-run"?"DRY-RUN · NOTHING SENT":"OFF"}</span>`}
+function tr(t){const live=t.mode=="live",st=t.status,p=t.pnl;let h=`<div class="row"><div class="rh"><span>${esc(t.coin)} <span class="m s">${esc(st)}</span></span><span class="${cls(p)}">${p!=null?sgn(p):t.value?usd(t.value):"–"}</span></div><div class="rd">`;
+ if(st=="skipped")return h+`${T(t.t)} · skipped: ${esc(t.note||"")}</div></div>`;
+ h+=`${T(t.t)} · ${live?"bought":"would buy"} ${usd(t.stake)}${t.lag!=null?" · "+t.lag.toFixed(1)+" s after the signal":""}${t.impact!=null?" · impact "+t.impact.toFixed(1)+"%":""}${t.rt!=null?" · round trip "+t.rt.toFixed(1)+"%":""}`;
+ if(t.half_usd)h+=` · half sold ${usd(t.half_usd)}`;
+ if(st=="closed")h+=`<br>${live?"sold":"would sell"} ${usd(t.exit_usd)} ${T(t.exit_ts)} · ${esc(t.reason||"")}${t.paper_pnl!=null?` · $20 reference: <span class="${cls(t.paper_pnl)}">${sgn(t.paper_pnl)}</span>`:""}`;
+ else if(t.stop&&t.now_px)h+=`<br>now ${usd(t.value)} · stop ${((t.stop/t.now_px-1)*100).toFixed(0)}% below the price`;
+ if(t.err)h+=`<br><span class="y">${st=="closing"?"sell retrying (try "+t.tries+"): ":""}${esc(t.err)}</span>`;
+ return h+`</div></div>`}
+function render(){
+ const app=document.getElementById("app"),pill=document.getElementById("pill");
+ if(!R){app.innerHTML=`<div class="${err?"warn":"empty"}">${esc(err||"Loading…")}</div>`;pill.innerHTML=`<span class="dot ${err?"off":"mid"}"></span>${err?"No data":"Loading"}`;return}
+ const now=Date.now()/1000,age=now-R.ts,L=R.limits||{},x=R.stats||{},E=R.engine||{},c=R.control||{};
+ document.getElementById("badge").innerHTML=badge(R.mode);
+ const runningOk=age<180,eng=E.up&&R.state=="engine";
+ pill.innerHTML=`<span class="dot ${runningOk?(eng?"on":"mid"):"off"}"></span>${!runningOk?"Not reporting":eng?"Running":R.role=="bridge"?"Between runs":"Engine restarting"}`;
+ let h="";
+ if(age>180)h+=`<div class="warn">Newest report is ${ago(age)}. The bot may be between runs; the bridge job keeps watching open trades then.</div>`;
+ if(c.sell_all_and_stop)h+=`<div class="warn">STOPPED: sold everything and stopped. Run the control again and pick resume to start it.</div>`;
+ else if(c.pause)h+=`<div class="warn">PAUSED: no new buys. Open trades are still managed.</div>`;
+ h+=`<div class="card"><h3>${R.mode=="live"?"P&L":"Would-be P&L"}</h3><div class="big ${cls(x.pnl)}">${sgn(x.pnl)}</div><div class="rd">${R.mode=="live"?"Trading with real money.":"Dry run: real Jupiter quotes and real transactions built, but nothing is signed or sent. No money moves."}${R.blocked?`<br><span class="y">New buys blocked: ${esc(R.blocked)}</span>`:""}</div>
+ <div class="grid" style="margin-top:10px"><div class="kv"><span>Closed</span><b>${x.closed||0}</b><span>${x.wins||0} won${x.closed?" ("+Math.round(100*(x.wins||0)/x.closed)+"%)":""}</span></div><div class="kv"><span>Today (Lagos)</span><b class="${cls(R.today)}">${sgn(R.today)}</b><span>new buys stop at -${usd(L.daily_loss,0)}</span></div><div class="kv"><span>Wallet</span><b>${R.balance_sol!=null?R.balance_sol.toFixed(4)+" SOL":"–"}</b><span>${R.balance_usd!=null?"about "+usd(R.balance_usd):(R.wallet_set?"":"not set")}</span></div><div class="kv"><span>Key secret</span><b>${R.key_set?(R.key_matches?"Matches":"<span class=r>Wrong key</span>"):"Not added"}</b><span>${R.key_set?(R.key_matches?"live allowed after your go":"live is refused"):"fine for the dry run"}</span></div></div></div>`;
+ h+=`<div class="card"><h3>Controls</h3><a class="rbig rb-stop" href="${CTL}" target="_blank" rel="noopener">STOP: sell everything + stop</a><a class="rbig rb-pause" href="${CTL}" target="_blank" rel="noopener">Pause new buys / resume</a><div class="rd" style="margin-top:8px">Opens GitHub: tap <b>Run workflow</b>, pick <b>sell everything + stop</b>, <b>pause</b> or <b>resume</b>, then tap <b>Run workflow</b> again. The bot reads it within about 15 seconds. Now: <b>${c.sell_all_and_stop?"STOPPED":c.pause?"PAUSED":"on"}</b>.</div></div>`;
+ const o=R.open||[];h+=`<div class="card"><h3>Open (${o.length} of ${L.max_open??"–"})</h3>${o.length?o.map(tr).join(""):'<div class="empty">None</div>'}</div>`;
+ h+=`<div class="card"><h3>History</h3>${(R.closed||[]).length?R.closed.map(tr).join(""):'<div class="empty">No closed trades yet</div>'}</div>`;
+ if((R.skipped||[]).length)h+=`<div class="card"><h3>Signals it skipped</h3>${R.skipped.map(tr).join("")}</div>`;
+ const f=E.feed||{};
+ h+=`<div class="card"><h3>Its own signal engine</h3><div class="grid"><div class="kv"><span>Engine</span><b class="${E.up?"g":"r"}">${E.up?"Running":"Down"}</b><span>${E.hb?"last beat "+ago(now-E.hb):""}</span></div><div class="kv"><span>Live feed</span><b class="${f.connected?"g":"y"}">${f.connected?"Connected":"Backup"}</b><span>${f.connected?(f.helius?"Helius":"public servers"):""}</span></div><div class="kv"><span>Signals, last hour</span><b>${E.sig_1h??"–"}</b><span>${E.pass_1h||0} passed the filters</span></div><div class="kv"><span>Wallets followed</span><b>${(E.wallets||[]).length}</b><span>same as paper main</span></div></div>
+ <div class="rd" style="margin-top:8px">${(E.wallets||[]).map(esc).join(", ")}</div>${(E.why_1h||[]).length?`<div class="rd" style="margin-top:6px">Blocked in the last hour: ${E.why_1h.map(([k,n])=>esc(k)+" ("+n+")").join(", ")}</div>`:""}
+ ${(E.last||[]).length?`<div style="margin-top:8px">${E.last.map(s=>`<div class="rd">${T(s.t)} · ${esc(s.coin)}<span class="tag ${s.st=="survivor"?"t-pass":s.st=="killed"?"t-kill":"t-other"}">${s.st=="survivor"?"passed":esc(s.st)}</span>${s.why?" "+esc(s.why):""}</div>`).join("")}</div>`:""}</div>`;
+ h+=`<div class="card"><h3>Limits</h3><table><tr><td>Most lost per trade at the −${L.stop_pct}% stop, costs included</td><td>${usd(L.max_loss)}</td></tr><tr><td>Largest stake per trade</td><td>${usd(L.max_stake)}</td></tr><tr><td>Smallest stake</td><td>${usd(L.min_stake)}</td></tr><tr><td>Max open trades</td><td>${L.max_open}</td></tr><tr><td>Daily loss cap (stops new buys until midnight Lagos)</td><td>${usd(L.daily_loss)}</td></tr><tr><td>Total loss cap (stops new buys)</td><td>${usd(L.total_loss)}</td></tr><tr><td>Buy slippage cap</td><td>${(L.buy_slip_bps/100).toFixed(0)}%</td></tr><tr><td>Sell slippage (widens on retries, hard cap 30%)</td><td>${(L.sell_slip_bps/100).toFixed(0)}%</td></tr><tr><td>Max price impact</td><td>${L.max_impact}%</td></tr><tr><td>Skip if the signal is older than</td><td>${L.max_lag} s</td></tr></table>
+ <div class="rd" style="margin-top:8px">Rules: same wallets and filters as the paper main account ($25k pool minimum, 32.5% top-10 holder block and the safety checks). Exits: −25% stop, +15% breakeven, +$5 floor, trail from +40%, half at 2x, breakeven floor from +50%, sell when the copied wallet sells. Prices checked every ~4 seconds.</div></div>`;
+ h+=`<div class="card"><h3>Activity</h3>${(R.events||[]).map(e=>`<div class="row"><div class="rd">${T(e.ts)} · <span class="${e.kind=="bad"?"r":e.kind=="buy"||e.kind=="sell"?"":"m"}">${esc(e.msg)}</span></div></div>`).join("")||'<div class="empty">Nothing yet</div>'}</div>`;
+ app.innerHTML=h;
+ document.getElementById("foot").textContent=`Report from ${T(R.ts)}. Updates by itself every 30 seconds. Your wallet address is never shown on this page.`}
+load();setInterval(load,30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
+</script>
+</body>
+</html>
